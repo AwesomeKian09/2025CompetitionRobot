@@ -9,6 +9,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.RobotController;
 import frc.robot.Constants;
+import frc.robot.Constants.elevator;
 import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
@@ -18,13 +19,14 @@ import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
-
+import java.util.function.BooleanSupplier;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.sim.SparkMaxSim;
 import com.revrobotics.sim.SparkRelativeEncoderSim;
@@ -164,12 +166,14 @@ public class Elevator extends SubsystemBase implements AutoCloseable {
    *
    * @param goalMeters the position to maintain
    */
+  private double currentGoalRotations;
+
   public void reachGoal(double goalMeters) {
+
     goalMeters = goalMeters - Constants.LEVEL_1;
-    m_controller.setReference(goalMeters / Constants.elevator.kPositionConversionFactor,
-        ControlType.kPosition, ClosedLoopSlot.kSlot0);
-    m_controller2.setReference(goalMeters / Constants.elevator.kPositionConversionFactor,
-        ControlType.kPosition, ClosedLoopSlot.kSlot0);
+    currentGoalRotations = goalMeters / Constants.elevator.kPositionConversionFactor;
+    m_controller.setReference(currentGoalRotations, ControlType.kPosition, ClosedLoopSlot.kSlot0);
+    m_controller2.setReference(currentGoalRotations, ControlType.kPosition, ClosedLoopSlot.kSlot0);
     // With the setpoint value we run PID control like normal
   }
 
@@ -218,13 +222,9 @@ public class Elevator extends SubsystemBase implements AutoCloseable {
     return runOnce(() -> reachGoal(Constants.LEVEL_4));
   }
 
-  // command for manual override
-  // public Command elevatorManualOverideCommand(XboxController opXboxController) {
-  // return new FunctionalCommand(() -> {
-  // }, () -> setVelocity(opXboxController.getLeftX() * Constants.elevator.kVelocityMultiplier),
-  // (done) -> stop(), () -> isForwardLimitSwitchPressed() || isReverseLimitSwitchPressed(),
-  // this);
-  // }
+  public BooleanSupplier elevatorAtLevel = (() -> java.lang.Math.abs(m_encoder.getPosition()
+      - currentGoalRotations) < Constants.elevator.kElevatorPositionTolerance);
+
 
 
   @Override
